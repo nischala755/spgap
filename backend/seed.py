@@ -68,54 +68,8 @@ def seed():
             else:
                 print(f"[--] Domain already exists: {domain_name}")
 
-        # -- Sample Projects --
-        sample_projects = [
-            {"title": "AI-Powered Chatbot for Student Queries", "domain": "AI/ML", "difficulty": "hard",
-             "description": "Build an intelligent chatbot that answers academic queries using NLP and ML techniques.",
-             "skills": ["NLP", "Machine Learning", "Deep Learning"]},
-            {"title": "Smart Campus IoT Dashboard", "domain": "IoT", "difficulty": "medium",
-             "description": "Design a real-time dashboard to monitor campus IoT sensors including temperature, occupancy, and energy usage.",
-             "skills": ["Sensor Networks", "Arduino", "Data Visualization"]},
-            {"title": "Blockchain-Based Certificate Verification", "domain": "Blockchain", "difficulty": "hard",
-             "description": "Develop a decentralized certificate verification system using Ethereum smart contracts.",
-             "skills": ["Smart Contracts", "Ethereum", "Full Stack"]},
-            {"title": "Cybersecurity Threat Detection System", "domain": "Cybersecurity", "difficulty": "hard",
-             "description": "Build a network intrusion detection system using machine learning algorithms.",
-             "skills": ["Network Security", "Machine Learning", "Forensics"]},
-            {"title": "E-Commerce Platform with Recommendation Engine", "domain": "Web Development", "difficulty": "medium",
-             "description": "Full-stack e-commerce application with a collaborative filtering recommendation system.",
-             "skills": ["React", "Node.js", "Machine Learning"]},
-            {"title": "Cloud-Native Microservices Architecture", "domain": "Cloud Computing", "difficulty": "hard",
-             "description": "Design and implement a microservices-based application deployed on Kubernetes.",
-             "skills": ["Docker", "Kubernetes", "DevOps"]},
-            {"title": "Data Analytics Dashboard for COVID-19", "domain": "Data Science", "difficulty": "medium",
-             "description": "Interactive dashboard visualizing COVID-19 trends with predictive modeling.",
-             "skills": ["Data Analytics", "Data Visualization", "Statistical Modeling"]},
-            {"title": "Cross-Platform Mobile Health App", "domain": "Mobile Development", "difficulty": "medium",
-             "description": "Build a health tracking app with step counter, diet tracker, and vital signs monitoring.",
-             "skills": ["Flutter", "React Native", "Backend"]},
-            {"title": "Automated Code Review Tool", "domain": "AI/ML", "difficulty": "hard",
-             "description": "AI-powered tool that reviews code for bugs, style issues, and security vulnerabilities.",
-             "skills": ["NLP", "Deep Learning", "Full Stack"]},
-            {"title": "Smart Traffic Management System", "domain": "IoT", "difficulty": "hard",
-             "description": "IoT-based traffic management using real-time sensor data and ML optimization.",
-             "skills": ["Embedded Systems", "Machine Learning", "Sensor Networks"]},
-        ]
+        # -- Sample Projects (Removed: Students will now create their own projects) --
 
-        for proj_data in sample_projects:
-            existing_proj = db.query(Project).filter(Project.title == proj_data["title"]).first()
-            if not existing_proj:
-                project = Project(
-                    title=proj_data["title"],
-                    domain=proj_data["domain"],
-                    description=proj_data["description"],
-                    difficulty=DifficultyLevel(proj_data["difficulty"]),
-                )
-                db.add(project)
-                db.flush()
-                for skill in proj_data["skills"]:
-                    db.add(ProjectSpecialization(project_id=project.id, specialization=skill))
-                print(f"[OK] Created project: {proj_data['title']}")
 
         # -- Sample Guides --
         sample_guides = [

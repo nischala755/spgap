@@ -8,6 +8,8 @@ from app.models.user import User, Student, UserRole
 from app.models.team import Team, TeamMember, TeamStatus
 from app.middleware.auth import get_current_user, require_student, require_teacher
 from app.schemas.team import TeamCreate, TeamJoin, TeamResponse
+from app.schemas.project import ProjectCreate
+from app.models.project import Project, ProjectSpecialization, DifficultyLevel
 from app.services.team_service import (
     create_team, join_team, leave_team, get_team_details, is_system_frozen,
 )
@@ -145,4 +147,58 @@ def update_team(
     db.commit()
     db.refresh(team)
     log_action(db, current_user.id, "UPDATE_TEAM", "team", team.id, data)
+    return get_team_details(db, team)
+
+
+@router.post("/me/project")
+def submit_team_project(
+    data: ProjectCreate,
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Submit or update a project for the current user's team (leader only)."""
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student or not student.team_id:
+        raise HTTPException(status_code=400, detail="You must be in a team to submit a project")
+
+    team = db.query(Team).filter(Team.id == student.team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if team.leader_id != student.id:
+        raise HTTPException(status_code=403, detail="Only the team leader can submit the project")
+
+    if team.status in (TeamStatus.FROZEN, TeamStatus.ALLOCATED):
+        raise HTTPException(status_code=400, detail="Cannot modify project after allocation")
+
+    # Check for duplicate title globally (except if it's their own project)
+    existing_title = db.query(Project).filter(Project.title == data.title).first()
+    if existing_title and existing_title.team_id != team.id:
+        raise HTTPException(status_code=400, detail="Project title is already taken by another team")
+
+    project = db.query(Project).filter(Project.team_id == team.id).first()
+    
+    if project:
+        # Update existing
+        project.title = data.title
+        project.domain = data.domain
+        project.description = data.description
+        db.query(ProjectSpecialization).filter(ProjectSpecialization.project_id == project.id).delete()
+    else:
+        # Create new
+        project = Project(
+            title=data.title,
+            domain=data.domain,
+            description=data.description,
+            difficulty=DifficultyLevel(data.difficulty) if data.difficulty else DifficultyLevel.MEDIUM,
+            team_id=team.id
+        )
+        db.add(project)
+        db.flush()
+
+    for skill in data.required_skills:
+        db.add(ProjectSpecialization(project_id=project.id, specialization=skill))
+
+    db.commit()
+    log_action(db, current_user.id, "SUBMIT_PROJECT", "team", team.id)
     return get_team_details(db, team)

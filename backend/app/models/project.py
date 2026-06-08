@@ -24,9 +24,11 @@ class Project(Base):
     difficulty = Column(SAEnum(DifficultyLevel), default=DifficultyLevel.MEDIUM)
     is_allocated = Column(Boolean, default=False)
     is_locked = Column(Boolean, default=False)
+    team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), unique=True, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
+    team = relationship("Team", back_populates="project")
     required_skills = relationship("ProjectSpecialization", back_populates="project", cascade="all, delete-orphan")
     allocation = relationship("Allocation", back_populates="project", uselist=False)
 

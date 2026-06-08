@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import api from '../../api/axios'
+import { useAuth } from '../../context/AuthContext'
 
 export default function TeamView() {
   const [team, setTeam] = useState(null)
@@ -10,6 +11,12 @@ export default function TeamView() {
   const [teamCode, setTeamCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const { user } = useAuth()
+
+  const [projectTitle, setProjectTitle] = useState('')
+  const [projectDomain, setProjectDomain] = useState('AI/ML')
+  const [projectDesc, setProjectDesc] = useState('')
+  const [projectSkills, setProjectSkills] = useState('')
 
   const fetchTeam = () => {
     setLoading(true)
@@ -54,6 +61,24 @@ export default function TeamView() {
       setTeam(null); fetchTeam()
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to leave team')
+    }
+  }
+
+  const handleProjectSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true); setError('')
+    try {
+      await api.post('/teams/me/project', {
+        title: projectTitle,
+        domain: projectDomain,
+        description: projectDesc,
+        required_skills: projectSkills.split(',').map(s => s.trim()).filter(s => s)
+      })
+      fetchTeam()
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to submit project')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -124,6 +149,64 @@ export default function TeamView() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Team Project */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Team Project
+              </div>
+              {team.project ? (
+                <div style={{ padding: 16, borderRadius: 12, background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-primary)' }}>{team.project.title}</div>
+                  <div style={{ display: 'inline-block', padding: '4px 8px', borderRadius: 6, background: 'var(--bg-secondary)', fontSize: 12, fontWeight: 600, marginTop: 8 }}>
+                    {team.project.domain}
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>{team.project.description}</p>
+                  {team.project.required_skills?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
+                      {team.project.required_skills.map(s => (
+                        <span key={s} className="badge badge-accent" style={{ fontSize: 10 }}>{s}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : team.leader_id === user.id ? (
+                <div style={{ padding: 16, borderRadius: 12, background: 'var(--bg-tertiary)' }}>
+                  <form onSubmit={handleProjectSubmit}>
+                    <div style={{ marginBottom: 12 }}>
+                      <label className="input-label">Project Title</label>
+                      <input className="input-field" value={projectTitle} onChange={e => setProjectTitle(e.target.value)} required />
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label className="input-label">Domain</label>
+                      <select className="input-field" value={projectDomain} onChange={e => setProjectDomain(e.target.value)}>
+                        <option value="AI/ML">AI/ML</option>
+                        <option value="Web Development">Web Development</option>
+                        <option value="IoT">IoT</option>
+                        <option value="Cybersecurity">Cybersecurity</option>
+                        <option value="Cloud Computing">Cloud Computing</option>
+                        <option value="Data Science">Data Science</option>
+                      </select>
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label className="input-label">Description</label>
+                      <textarea className="input-field" value={projectDesc} onChange={e => setProjectDesc(e.target.value)} rows={3} required />
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label className="input-label">Required Skills (comma separated)</label>
+                      <input className="input-field" value={projectSkills} onChange={e => setProjectSkills(e.target.value)} placeholder="e.g. React, Python, PostgreSQL" />
+                    </div>
+                    <button type="submit" className="btn btn-primary" disabled={submitting}>
+                      {submitting ? 'Submitting...' : 'Submit Project'}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div style={{ padding: 16, borderRadius: 12, background: 'rgba(255,255,255,0.02)', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                  Waiting for team leader to submit the project details.
+                </div>
+              )}
             </div>
 
             {/* Leave button */}

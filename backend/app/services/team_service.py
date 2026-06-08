@@ -151,7 +151,17 @@ def get_team_details(db: Session, team: Team) -> dict:
                 "domain": student.domain,
             })
 
-    leader = db.query(Student).filter(Student.id == team.leader_id).first()
+    project_data = None
+    from app.models.project import Project, ProjectSpecialization
+    project = db.query(Project).filter(Project.team_id == team.id).first()
+    if project:
+        skills = db.query(ProjectSpecialization).filter(ProjectSpecialization.project_id == project.id).all()
+        project_data = {
+            "title": project.title,
+            "domain": project.domain,
+            "description": project.description,
+            "required_skills": [s.specialization for s in skills]
+        }
 
     return {
         "id": team.id,
@@ -165,5 +175,6 @@ def get_team_details(db: Session, team: Team) -> dict:
         "status": team.status.value if isinstance(team.status, TeamStatus) else team.status,
         "member_count": len(member_list),
         "members": member_list,
+        "project": project_data,
         "created_at": team.created_at,
     }

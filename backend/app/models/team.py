@@ -32,6 +32,7 @@ class Team(Base):
     leader = relationship("Student", foreign_keys=[leader_id])
     members = relationship("Student", back_populates="team", foreign_keys="[Student.team_id]")
     team_members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
+    project = relationship("Project", back_populates="team", uselist=False)
     allocation = relationship("Allocation", back_populates="team", uselist=False)
 
 
