@@ -163,6 +163,8 @@ def get_team_details(db: Session, team: Team) -> dict:
             "required_skills": [s.specialization for s in skills]
         }
 
+    leader = db.query(Student).filter(Student.id == team.leader_id).first()
+
     return {
         "id": team.id,
         "name": team.name,
