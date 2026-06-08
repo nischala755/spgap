@@ -1,0 +1,209 @@
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import api from '../../api/axios'
+
+export default function TeamView() {
+  const [team, setTeam] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [action, setAction] = useState(null) // 'create' | 'join'
+  const [teamName, setTeamName] = useState('')
+  const [teamCode, setTeamCode] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+
+  const fetchTeam = () => {
+    setLoading(true)
+    api.get('/students/me/team')
+      .then(res => setTeam(res.data.team))
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { fetchTeam() }, [])
+
+  const handleCreate = async (e) => {
+    e.preventDefault()
+    setSubmitting(true); setError('')
+    try {
+      await api.post('/teams', { name: teamName })
+      setAction(null); setTeamName(''); fetchTeam()
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to create team')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleJoin = async (e) => {
+    e.preventDefault()
+    setSubmitting(true); setError('')
+    try {
+      await api.post('/teams/join', { team_code: teamCode.toUpperCase() })
+      setAction(null); setTeamCode(''); fetchTeam()
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to join team')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleLeave = async () => {
+    if (!confirm('Are you sure you want to leave this team?')) return
+    try {
+      await api.post('/teams/leave')
+      setTeam(null); fetchTeam()
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to leave team')
+    }
+  }
+
+  if (loading) {
+    return <div className="page-body" style={{ paddingTop: 40 }}><div className="skeleton" style={{ height: 300, borderRadius: 16 }} /></div>
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1>My Team</h1>
+        <p>Create, join, or manage your project team</p>
+      </div>
+      <div className="page-body">
+        {team ? (
+          /* Team exists */
+          <motion.div className="card" style={{ padding: 32, maxWidth: 600 }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div>
+                <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{team.name}</h3>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                  {team.department} · Semester {team.semester} · Section {team.section}
+                </div>
+              </div>
+              <span className={`badge ${team.status === 'frozen' ? 'badge-danger' : team.status === 'allocated' ? 'badge-warning' : 'badge-accent'}`} style={{ fontSize: 13 }}>
+                {team.status}
+              </span>
+            </div>
+
+            {/* Team Code */}
+            <div style={{
+              padding: 16, borderRadius: 12, marginBottom: 20,
+              background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06))',
+              border: '1px solid rgba(99,102,241,0.12)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Team Code</div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-primary)', letterSpacing: 4, fontFamily: 'monospace' }}>
+                {team.team_code}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Share this code with your teammates</div>
+            </div>
+
+            {/* Members */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Members ({team.member_count}/4)
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {team.members?.map(m => (
+                  <div key={m.student_id} style={{
+                    padding: '12px 16px', borderRadius: 12, background: 'var(--bg-tertiary)',
+                    display: 'flex', alignItems: 'center', gap: 12,
+                  }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      background: team.leader_id === m.student_id ? 'linear-gradient(135deg, #f59e0b, #fbbf24)' : 'linear-gradient(135deg, #6366f1, #818cf8)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'white', fontWeight: 700, fontSize: 14,
+                    }}>
+                      {team.leader_id === m.student_id ? '★' : m.name.charAt(0)}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{m.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.usn} · {m.domain || 'No domain'}</div>
+                    </div>
+                    {team.leader_id === m.student_id && <span className="badge badge-warning" style={{ fontSize: 10 }}>Leader</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Leave button */}
+            {team.status !== 'frozen' && team.status !== 'allocated' && (
+              <button className="btn btn-danger" onClick={handleLeave}>Leave Team</button>
+            )}
+          </motion.div>
+        ) : (
+          /* No team — show create/join options */
+          <div>
+            {!action && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 600 }}>
+                <motion.div
+                  className="card"
+                  style={{ padding: 32, textAlign: 'center', cursor: 'pointer' }}
+                  onClick={() => { setAction('create'); setError('') }}
+                  whileHover={{ scale: 1.02, borderColor: 'var(--color-primary)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div style={{ fontSize: 44, marginBottom: 12 }}>🚀</div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Create Team</h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Start a new team and invite members</p>
+                </motion.div>
+                <motion.div
+                  className="card"
+                  style={{ padding: 32, textAlign: 'center', cursor: 'pointer' }}
+                  onClick={() => { setAction('join'); setError('') }}
+                  whileHover={{ scale: 1.02, borderColor: 'var(--color-accent)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div style={{ fontSize: 44, marginBottom: 12 }}>🤝</div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>Join Team</h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Enter a team code to join</p>
+                </motion.div>
+              </div>
+            )}
+
+            {error && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{
+                marginTop: 16, padding: '12px 16px', borderRadius: 10,
+                background: 'rgba(239,68,68,0.08)', color: 'var(--color-danger)', fontSize: 13, fontWeight: 500,
+              }}>
+                {error}
+              </motion.div>
+            )}
+
+            {action === 'create' && (
+              <motion.div className="card" style={{ padding: 28, maxWidth: 440, marginTop: 20 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, color: 'var(--text-primary)' }}>Create New Team</h3>
+                <form onSubmit={handleCreate}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label className="input-label">Team Name</label>
+                    <input className="input-field" placeholder="e.g., Team Alpha" value={teamName} onChange={e => setTeamName(e.target.value)} required />
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button type="submit" className="btn btn-primary" disabled={submitting}>{submitting ? 'Creating...' : 'Create Team'}</button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setAction(null)}>Cancel</button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+
+            {action === 'join' && (
+              <motion.div className="card" style={{ padding: 28, maxWidth: 440, marginTop: 20 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 16, color: 'var(--text-primary)' }}>Join Existing Team</h3>
+                <form onSubmit={handleJoin}>
+                  <div style={{ marginBottom: 16 }}>
+                    <label className="input-label">Team Code</label>
+                    <input className="input-field" placeholder="Enter 8-character code" value={teamCode} onChange={e => setTeamCode(e.target.value)} maxLength={8} style={{ textTransform: 'uppercase', letterSpacing: 2, fontFamily: 'monospace', fontSize: 18, textAlign: 'center' }} required />
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button type="submit" className="btn btn-accent" disabled={submitting}>{submitting ? 'Joining...' : 'Join Team'}</button>
+                    <button type="button" className="btn btn-ghost" onClick={() => setAction(null)}>Cancel</button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
