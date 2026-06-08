@@ -49,7 +49,7 @@ export default function TeacherLoginPage() {
       })
       localStorage.setItem('spgap_token', res.data.access_token)
       localStorage.setItem('spgap_user', JSON.stringify(res.data))
-      navigate('/teacher')
+      window.location.href = '/teacher'
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed.')
     } finally {
