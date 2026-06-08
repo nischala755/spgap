@@ -171,6 +171,7 @@ def get_team_details(db: Session, team: Team) -> dict:
         "team_code": team.team_code,
         "leader_id": team.leader_id,
         "leader_name": leader.name if leader else None,
+        "leader_user_id": leader.user_id if leader else None,
         "department": team.department,
         "semester": team.semester,
         "section": team.section,

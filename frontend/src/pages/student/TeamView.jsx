@@ -171,7 +171,7 @@ export default function TeamView() {
                     </div>
                   )}
                 </div>
-              ) : team.leader_id === user.id ? (
+              ) : team.leader_user_id === user.user_id ? (
                 <div style={{ padding: 16, borderRadius: 12, background: 'var(--bg-tertiary)' }}>
                   <form onSubmit={handleProjectSubmit}>
                     <div style={{ marginBottom: 12 }}>
