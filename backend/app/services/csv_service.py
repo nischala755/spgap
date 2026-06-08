@@ -209,9 +209,10 @@ def reset_csv_imports(db: Session) -> dict:
     # Remove allocations for teams containing CSV students
     team_ids = {s.team_id for s in csv_students if s.team_id}
     if team_ids:
-        db.query(Allocation).filter(Allocation.team_id.in_(team_ids)).delete(synchronize_session="fetch")
+        db.query(Allocation).filter(Allocation.team_id.in_(team_ids)).delete(synchronize_session=False)
 
     # Handle teams
+    from app.models.project import Project, ProjectSpecialization
     for team_id in list(team_ids):
         team = db.query(Team).filter(Team.id == team_id).first()
         if not team:
@@ -222,22 +223,23 @@ def reset_csv_imports(db: Session) -> dict:
         all_csv = member_ids.issubset(csv_student_ids)
 
         if all_csv:
-            db.query(TeamMember).filter(TeamMember.team_id == team_id).delete()
-            for sid in member_ids:
-                s = db.query(Student).filter(Student.id == sid).first()
-                if s:
-                    s.team_id = None
-            db.delete(team)
+            db.query(TeamMember).filter(TeamMember.team_id == team_id).delete(synchronize_session=False)
+            db.query(Student).filter(Student.team_id == team_id).update({"team_id": None}, synchronize_session=False)
+            
+            project = db.query(Project).filter(Project.team_id == team_id).first()
+            if project:
+                db.query(ProjectSpecialization).filter(ProjectSpecialization.project_id == project.id).delete(synchronize_session=False)
+                db.query(Project).filter(Project.id == project.id).delete(synchronize_session=False)
+
+            db.query(Team).filter(Team.id == team_id).delete(synchronize_session=False)
             deleted_teams += 1
         else:
-            for sid in member_ids & csv_student_ids:
-                db.query(TeamMember).filter(
-                    TeamMember.team_id == team_id,
-                    TeamMember.student_id == sid,
-                ).delete()
-                s = db.query(Student).filter(Student.id == sid).first()
-                if s:
-                    s.team_id = None
+            db.query(TeamMember).filter(
+                TeamMember.team_id == team_id,
+                TeamMember.student_id.in_(csv_student_ids),
+            ).delete(synchronize_session=False)
+            db.query(Student).filter(Student.id.in_(member_ids & csv_student_ids)).update({"team_id": None}, synchronize_session=False)
+
             remaining = db.query(TeamMember).filter(TeamMember.team_id == team_id).count()
             if remaining < 4 and team.status != TeamStatus.FROZEN:
                 team.status = TeamStatus.OPEN
@@ -247,16 +249,12 @@ def reset_csv_imports(db: Session) -> dict:
                     team.leader_id = new_leader.student_id
 
     # Delete CSV students and their user accounts
-    deleted_students = 0
-    for student in csv_students:
-        db.query(StudentSpecialization).filter(
-            StudentSpecialization.student_id == student.id
-        ).delete()
-        user = db.query(User).filter(User.id == student.user_id).first()
-        db.delete(student)
-        if user:
-            db.delete(user)
-        deleted_students += 1
+    if csv_student_ids:
+        user_ids = {s.user_id for s in csv_students}
+        db.query(StudentSpecialization).filter(StudentSpecialization.student_id.in_(csv_student_ids)).delete(synchronize_session=False)
+        db.query(Student).filter(Student.id.in_(csv_student_ids)).delete(synchronize_session=False)
+        db.query(User).filter(User.id.in_(user_ids)).delete(synchronize_session=False)
+        deleted_students = len(csv_student_ids)
 
     db.commit()
 
