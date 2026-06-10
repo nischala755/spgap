@@ -24,8 +24,19 @@ export default function ReportsPage() {
     }).catch(console.error).finally(() => setLoading(false))
   }, [])
 
-  const handleExport = () => {
-    window.open('/api/reports/export', '_blank')
+  const handleExport = async () => {
+    try {
+      const res = await api.get('/reports/export', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'spgap_allocations.csv')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (err) {
+      alert('Failed to export CSV')
+    }
   }
 
   if (loading) {
