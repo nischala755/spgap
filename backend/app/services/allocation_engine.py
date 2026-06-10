@@ -35,9 +35,10 @@ class AllocationEngine:
             a.project_id for a in
             self.db.query(Allocation).filter(Allocation.is_frozen == True).all()
         ]
-        self.db.query(Project).filter(
-            Project.id.notin_(frozen_project_ids) if frozen_project_ids else True
-        ).update({"is_allocated": False}, synchronize_session="fetch")
+        query = self.db.query(Project)
+        if frozen_project_ids:
+            query = query.filter(Project.id.notin_(frozen_project_ids))
+        query.update({"is_allocated": False}, synchronize_session="fetch")
         self.db.commit()
 
         # Get eligible teams (3-4 members, has a project, not already frozen-allocated)
