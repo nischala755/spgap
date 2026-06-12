@@ -132,7 +132,7 @@ def export_teams_csv(db: Session) -> str:
     ])
 
     for team in teams:
-        members = db.query(TeamMember).filter(TeamMember.team_id == team.id).all()
+        members = team.members
         member_names = ", ".join([m.name for m in members])
         project = team.project
         
