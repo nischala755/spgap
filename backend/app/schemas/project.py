@@ -10,6 +10,7 @@ class ProjectCreate(BaseModel):
     description: str | None = None
     difficulty: str = "medium"
     required_skills: list[str] = []
+    mapped_sdg: str | None = None
 
 
 class ProjectUpdate(BaseModel):
@@ -18,6 +19,7 @@ class ProjectUpdate(BaseModel):
     description: str | None = None
     difficulty: str | None = None
     required_skills: list[str] | None = None
+    mapped_sdg: str | None = None
 
 
 class ProjectResponse(BaseModel):
@@ -29,6 +31,7 @@ class ProjectResponse(BaseModel):
     is_allocated: bool
     is_locked: bool
     required_skills: list[str] = []
+    mapped_sdg: str | None = None
     created_at: datetime | None = None
 
     class Config:

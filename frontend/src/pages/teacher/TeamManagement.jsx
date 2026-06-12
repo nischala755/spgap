@@ -18,6 +18,21 @@ export default function TeamManagement() {
 
   useEffect(() => { fetchTeams() }, [search])
 
+  const handleExport = async () => {
+    try {
+      const res = await api.get('/reports/export-teams', { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'spgap_all_teams.csv')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (err) {
+      alert('Failed to export CSV')
+    }
+  }
+
   const statusBadge = (status) => {
     const map = {
       open: 'badge-accent', full: 'badge-primary',
@@ -29,8 +44,13 @@ export default function TeamManagement() {
   return (
     <div>
       <div className="page-header">
-        <h1>Team Management</h1>
-        <p>View and manage all student teams</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1>Team Management</h1>
+            <p>View and manage all student teams</p>
+          </div>
+          <button className="btn btn-primary" onClick={handleExport}>📥 Export CSV</button>
+        </div>
       </div>
       <div className="page-body">
         <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>

@@ -23,7 +23,7 @@ export default function CSVUploadPage() {
     const formData = new FormData()
     formData.append('file', file)
     try {
-      const res = await api.post('/csv/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const res = await api.post('/csv/upload', formData)
       setResult(res.data)
       fetchStats()
     } catch (err) {

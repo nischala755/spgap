@@ -17,6 +17,7 @@ export default function TeamView() {
   const [projectDomain, setProjectDomain] = useState('AI/ML')
   const [projectDesc, setProjectDesc] = useState('')
   const [projectSkills, setProjectSkills] = useState('')
+  const [mappedSdg, setMappedSdg] = useState('')
 
   const fetchTeam = () => {
     setLoading(true)
@@ -72,6 +73,7 @@ export default function TeamView() {
         title: projectTitle,
         domain: projectDomain,
         description: projectDesc,
+        mapped_sdg: mappedSdg,
         required_skills: projectSkills.split(',').map(s => s.trim()).filter(s => s)
       })
       fetchTeam()
@@ -162,6 +164,11 @@ export default function TeamView() {
                   <div style={{ display: 'inline-block', padding: '4px 8px', borderRadius: 6, background: 'var(--bg-secondary)', fontSize: 12, fontWeight: 600, marginTop: 8 }}>
                     {team.project.domain}
                   </div>
+                  {team.project.mapped_sdg && (
+                    <div style={{ display: 'inline-block', padding: '4px 8px', borderRadius: 6, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', fontSize: 12, fontWeight: 600, marginTop: 8, marginLeft: 8 }}>
+                      SDG: {team.project.mapped_sdg}
+                    </div>
+                  )}
                   <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.5 }}>{team.project.description}</p>
                   {team.project.required_skills?.length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
@@ -192,6 +199,10 @@ export default function TeamView() {
                     <div style={{ marginBottom: 12 }}>
                       <label className="input-label">Description</label>
                       <textarea className="input-field" value={projectDesc} onChange={e => setProjectDesc(e.target.value)} rows={3} required />
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label className="input-label">Mapped SDG (Sustainable Development Goal)</label>
+                      <input className="input-field" value={mappedSdg} onChange={e => setMappedSdg(e.target.value)} placeholder="e.g. Quality Education, Climate Action" />
                     </div>
                     <div style={{ marginBottom: 16 }}>
                       <label className="input-label">Required Skills (comma separated)</label>

@@ -117,3 +117,38 @@ def export_allocations_csv(db: Session) -> str:
         ])
 
     return output.getvalue()
+
+
+def export_teams_csv(db: Session) -> str:
+    """Export all teams and their details as CSV string."""
+    teams = db.query(Team).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Team Name", "Team Code", "Department", "Semester", "Section",
+        "Member Count", "Members", "Status",
+        "Project Title", "Project Domain", "Mapped SDG", "Project Skills"
+    ])
+
+    for team in teams:
+        members = db.query(TeamMember).filter(TeamMember.team_id == team.id).all()
+        member_names = ", ".join([m.name for m in members])
+        project = team.project
+        
+        writer.writerow([
+            team.name,
+            team.team_code,
+            team.department,
+            team.semester,
+            team.section,
+            len(members),
+            member_names,
+            team.status.value if isinstance(team.status, TeamStatus) else team.status,
+            project.title if project else "",
+            project.domain if project else "",
+            project.mapped_sdg if project else "",
+            ", ".join(project.required_skills) if project and getattr(project, "required_skills", None) else ""
+        ])
+
+    return output.getvalue()

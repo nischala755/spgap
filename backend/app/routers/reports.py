@@ -14,6 +14,7 @@ from app.services.report_service import (
     get_domain_distribution,
     get_team_distribution,
     export_allocations_csv,
+    export_teams_csv,
 )
 
 router = APIRouter(prefix="/api/reports", tags=["Reports"])
@@ -66,4 +67,18 @@ def export_csv(
         io.BytesIO(csv_content.encode("utf-8")),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=allocations_export.csv"},
+    )
+
+
+@router.get("/export-teams")
+def export_teams(
+    current_user: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    """Export all teams as a downloadable CSV."""
+    csv_content = export_teams_csv(db)
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode("utf-8")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=teams_export.csv"},
     )

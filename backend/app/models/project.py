@@ -25,6 +25,7 @@ class Project(Base):
     is_allocated = Column(Boolean, default=False)
     is_locked = Column(Boolean, default=False)
     team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), unique=True, nullable=True)
+    mapped_sdg = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
