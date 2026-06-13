@@ -24,6 +24,12 @@ def run_migrations():
     if "projects" in inspector.get_table_names():
         existing_proj = {col["name"] for col in inspector.get_columns("projects")}
         with engine.begin() as conn:
+            # Quick fix for Nihar's email incorrectly registered as Sharanya's
+            try:
+                conn.execute(text("UPDATE users SET email = '23aiml094@bnmit.in' WHERE email = '23aiml096@bnmit.in'"))
+            except Exception:
+                pass
+                
             if "mapped_sdg" not in existing_proj:
                 conn.execute(text("ALTER TABLE projects ADD COLUMN mapped_sdg TEXT"))
                 # Also delete the existing project as requested by the user
