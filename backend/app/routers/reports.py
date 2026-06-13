@@ -82,3 +82,29 @@ def export_teams(
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=teams_export.csv"},
     )
+
+
+@router.get("/fix-email")
+def fix_email(
+    current_user: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    from sqlalchemy import text
+    try:
+        # Check if 094 exists
+        user_094 = db.execute(text("SELECT id FROM users WHERE email = '23aiml094@bnmit.in'")).fetchone()
+        user_096 = db.execute(text("SELECT id FROM users WHERE email = '23aiml096@bnmit.in'")).fetchone()
+        
+        if user_094:
+            return {"status": "error", "detail": "094 already exists!", "id": user_094[0]}
+            
+        if not user_096:
+            return {"status": "error", "detail": "096 does not exist!"}
+            
+        # Do the update
+        db.execute(text("UPDATE users SET email = '23aiml094@bnmit.in' WHERE email = '23aiml096@bnmit.in'"))
+        db.commit()
+        return {"status": "success", "detail": "Updated 096 to 094"}
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "detail": str(e)}
