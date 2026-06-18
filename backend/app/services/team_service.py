@@ -7,6 +7,9 @@ from app.models.user import Student
 from app.models.team import Team, TeamMember, TeamStatus
 from app.models.allocation import Allocation
 
+MIN_TEAM_MEMBERS = 2
+MAX_TEAM_MEMBERS = 3
+
 
 def generate_team_code(db: Session) -> str:
     """Generate a unique 8-character team code."""
@@ -78,8 +81,8 @@ def join_team(db: Session, student: Student, team_code: str) -> Team:
 
     # Check capacity
     member_count = db.query(TeamMember).filter(TeamMember.team_id == team.id).count()
-    if member_count >= 4:
-        raise ValueError("Team is full (maximum 4 members).")
+    if member_count >= MAX_TEAM_MEMBERS:
+        raise ValueError(f"Team is full (maximum {MAX_TEAM_MEMBERS} members).")
 
     # Add member
     student.team_id = team.id
@@ -87,7 +90,7 @@ def join_team(db: Session, student: Student, team_code: str) -> Team:
     db.add(member)
 
     # Update status if full
-    if member_count + 1 >= 4:
+    if member_count + 1 >= MAX_TEAM_MEMBERS:
         team.status = TeamStatus.FULL
 
     db.commit()
@@ -131,10 +134,48 @@ def leave_team(db: Session, student: Student) -> None:
 
     # Update team status
     member_count = db.query(TeamMember).filter(TeamMember.team_id == team.id).count()
-    if member_count < 4:
+    if member_count < MAX_TEAM_MEMBERS:
         team.status = TeamStatus.OPEN
 
     db.commit()
+
+
+def remove_team_member(db: Session, team: Team, student_id: int) -> Team:
+    """Remove a member from a legacy oversized team."""
+    if is_system_frozen(db):
+        raise ValueError("System is frozen. Cannot modify teams.")
+
+    if team.status == TeamStatus.FROZEN:
+        raise ValueError("Cannot modify a frozen team.")
+
+    member_count = db.query(TeamMember).filter(TeamMember.team_id == team.id).count()
+    if member_count <= MAX_TEAM_MEMBERS:
+        raise ValueError(f"Members can only be removed from teams above {MAX_TEAM_MEMBERS} members.")
+
+    membership = db.query(TeamMember).filter(
+        TeamMember.team_id == team.id,
+        TeamMember.student_id == student_id,
+    ).first()
+    if not membership:
+        raise ValueError("Student is not a member of this team.")
+
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if student:
+        student.team_id = None
+
+    db.delete(membership)
+
+    if team.leader_id == student_id:
+        replacement = db.query(TeamMember).filter(TeamMember.team_id == team.id).first()
+        if replacement:
+            team.leader_id = replacement.student_id
+
+    member_count -= 1
+    if team.status != TeamStatus.ALLOCATED:
+        team.status = TeamStatus.FULL if member_count >= MAX_TEAM_MEMBERS else TeamStatus.OPEN
+    db.commit()
+    db.refresh(team)
+    return team
 
 
 def get_team_details(db: Session, team: Team) -> dict:
@@ -177,6 +218,8 @@ def get_team_details(db: Session, team: Team) -> dict:
         "section": team.section,
         "status": team.status.value if isinstance(team.status, TeamStatus) else team.status,
         "member_count": len(member_list),
+        "min_members": MIN_TEAM_MEMBERS,
+        "max_members": MAX_TEAM_MEMBERS,
         "members": member_list,
         "project": project_data,
         "created_at": team.created_at,
