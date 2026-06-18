@@ -11,7 +11,7 @@ from app.schemas.team import TeamCreate, TeamJoin, TeamResponse
 from app.schemas.project import ProjectCreate
 from app.models.project import Project, ProjectSpecialization, DifficultyLevel
 from app.services.team_service import (
-    create_team, join_team, leave_team, get_team_details, is_system_frozen,
+    create_team, join_team, leave_team, remove_team_member, get_team_details, is_system_frozen,
 )
 from app.utils.audit import log_action
 
@@ -148,6 +148,57 @@ def update_team(
     db.refresh(team)
     log_action(db, current_user.id, "UPDATE_TEAM", "team", team.id, data)
     return get_team_details(db, team)
+
+
+@router.delete("/{team_id}/members/{student_id}")
+def delete_team_member(
+    team_id: int,
+    student_id: int,
+    current_user: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    """Remove one member from a legacy oversized team."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    try:
+        updated_team = remove_team_member(db, team, student_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    log_action(db, current_user.id, "REMOVE_TEAM_MEMBER", "team", team.id, {"student_id": student_id})
+    return get_team_details(db, updated_team)
+
+
+@router.delete("/me/members/{student_id}")
+def delete_my_team_member(
+    student_id: int,
+    current_user: User = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Team leader removes a member from an oversized team."""
+    student = db.query(Student).filter(Student.user_id == current_user.id).first()
+    if not student or not student.team_id:
+        raise HTTPException(status_code=400, detail="You are not in a team")
+
+    team = db.query(Team).filter(Team.id == student.team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if team.leader_id != student.id:
+        raise HTTPException(status_code=403, detail="Only the team leader can remove members")
+
+    if student_id == student.id:
+        raise HTTPException(status_code=400, detail="You cannot remove yourself. Use 'Leave Team' instead.")
+
+    try:
+        updated_team = remove_team_member(db, team, student_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    log_action(db, current_user.id, "LEADER_REMOVE_TEAM_MEMBER", "team", team.id, {"student_id": student_id})
+    return get_team_details(db, updated_team)
 
 
 @router.post("/me/project")

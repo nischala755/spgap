@@ -65,6 +65,16 @@ export default function TeamView() {
     }
   }
 
+  const handleRemoveMember = async (studentId, studentName) => {
+    if (!confirm(`Are you sure you want to remove ${studentName} from the team?`)) return
+    try {
+      await api.delete(`/teams/me/members/${studentId}`)
+      fetchTeam()
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to remove member')
+    }
+  }
+
   const handleProjectSubmit = async (e) => {
     e.preventDefault()
     setSubmitting(true); setError('')
@@ -127,7 +137,7 @@ export default function TeamView() {
             {/* Members */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Members ({team.member_count}/4)
+                Members ({team.member_count}/{team.max_members || 3})
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
                 {team.members?.map(m => (
@@ -148,6 +158,19 @@ export default function TeamView() {
                       <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.usn} · {m.domain || 'No domain'}</div>
                     </div>
                     {team.leader_id === m.student_id && <span className="badge badge-warning" style={{ fontSize: 10 }}>Leader</span>}
+                    {team.leader_user_id === user.user_id && team.leader_id !== m.student_id && team.members.length > 3 && (
+                      <button 
+                        onClick={() => handleRemoveMember(m.student_id, m.name)}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: 'none',
+                          borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', cursor: 'pointer', fontSize: 16, fontWeight: 800
+                        }}
+                        title="Remove member (team is oversized)"
+                      >
+                        −
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
