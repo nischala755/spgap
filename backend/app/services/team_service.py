@@ -149,8 +149,8 @@ def remove_team_member(db: Session, team: Team, student_id: int) -> Team:
         raise ValueError("Cannot modify a frozen team.")
 
     member_count = db.query(TeamMember).filter(TeamMember.team_id == team.id).count()
-    if member_count <= MAX_TEAM_MEMBERS:
-        raise ValueError(f"Members can only be removed from teams above {MAX_TEAM_MEMBERS} members.")
+    if member_count <= MIN_TEAM_MEMBERS:
+        raise ValueError(f"Cannot remove members — team already has the minimum of {MIN_TEAM_MEMBERS} members.")
 
     membership = db.query(TeamMember).filter(
         TeamMember.team_id == team.id,
