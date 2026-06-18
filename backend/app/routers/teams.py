@@ -150,27 +150,6 @@ def update_team(
     return get_team_details(db, team)
 
 
-@router.delete("/{team_id}/members/{student_id}")
-def delete_team_member(
-    team_id: int,
-    student_id: int,
-    current_user: User = Depends(require_teacher),
-    db: Session = Depends(get_db),
-):
-    """Remove one member from a legacy oversized team."""
-    team = db.query(Team).filter(Team.id == team_id).first()
-    if not team:
-        raise HTTPException(status_code=404, detail="Team not found")
-
-    try:
-        updated_team = remove_team_member(db, team, student_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-    log_action(db, current_user.id, "REMOVE_TEAM_MEMBER", "team", team.id, {"student_id": student_id})
-    return get_team_details(db, updated_team)
-
-
 @router.delete("/me/members/{student_id}")
 def delete_my_team_member(
     student_id: int,
@@ -198,6 +177,27 @@ def delete_my_team_member(
         raise HTTPException(status_code=400, detail=str(e))
 
     log_action(db, current_user.id, "LEADER_REMOVE_TEAM_MEMBER", "team", team.id, {"student_id": student_id})
+    return get_team_details(db, updated_team)
+
+
+@router.delete("/{team_id}/members/{student_id}")
+def delete_team_member(
+    team_id: int,
+    student_id: int,
+    current_user: User = Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    """Remove one member from a legacy oversized team."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    try:
+        updated_team = remove_team_member(db, team, student_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    log_action(db, current_user.id, "REMOVE_TEAM_MEMBER", "team", team.id, {"student_id": student_id})
     return get_team_details(db, updated_team)
 
 
